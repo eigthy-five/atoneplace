@@ -633,6 +633,62 @@
       color: var(--text-muted);
     }
 
+    /* ───── Article Modal ───── */
+    #article-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: var(--bg);
+      display: none;
+      flex-direction: column;
+    }
+
+    #article-modal.open { display: flex; }
+
+    .article-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      flex-shrink: 0;
+    }
+
+    .article-bar .article-domain {
+      font-size: 12px;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      margin: 0 12px;
+    }
+
+    .article-bar button {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 600;
+      padding: 0 12px;
+      transition: background var(--transition);
+      flex-shrink: 0;
+    }
+
+    .article-bar button:hover { background: var(--surface-hover); }
+
+    #article-frame {
+      flex: 1;
+      border: none;
+      width: 100%;
+      background: #fff;
+    }
+
     /* ───── Calendar ───── */
     .cal-header {
       display: flex;
@@ -924,6 +980,15 @@
   </header>
 
   <main id="page-content"></main>
+
+  <div id="article-modal">
+    <div class="article-bar">
+      <button onclick="App.closeArticle()">&larr; Back</button>
+      <span class="article-domain" id="article-domain"></span>
+      <button onclick="window.open(document.getElementById('article-frame').src,'_blank')">Open &nearr;</button>
+    </div>
+    <iframe id="article-frame" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
+  </div>
 
   <div id="settings-overlay"></div>
   <aside id="settings-panel">
@@ -1870,7 +1935,7 @@
         container.innerHTML = '<div class="news-list fade-in">' + stories.map(s => {
           const domain = s.url ? extractDomain(s.url) : 'news.ycombinator.com';
           const href = s.url || `https://news.ycombinator.com/item?id=${s.id}`;
-          return `<a class="news-item" href="${href}" target="_blank" rel="noopener">
+          return `<a class="news-item" href="${href}" onclick="event.preventDefault();App.openArticle('${href.replace(/'/g, "\\'")}')">
             <div class="news-title">${s.title}</div>
             <div class="news-meta">
               <span>${domain}</span>
@@ -1894,7 +1959,7 @@
         }
 
         container.innerHTML = '<div class="news-list fade-in">' + items.map(item => {
-          return `<a class="news-item" href="${item.link}" target="_blank" rel="noopener">
+          return `<a class="news-item" href="${item.link}" onclick="event.preventDefault();App.openArticle('${item.link.replace(/'/g, "\\'")}')">
             <div class="news-title">${item.title}</div>
             <div class="news-meta">
               <span>${item.source}</span>
@@ -2016,6 +2081,22 @@
         if (this.refreshTimer) clearInterval(this.refreshTimer);
         const mins = Store.get().refreshMinutes || 5;
         this.refreshTimer = setInterval(() => this.loadPage(), mins * 60 * 1000);
+      },
+
+      /* ───── Article Modal ───── */
+      openArticle(url) {
+        const modal = document.getElementById('article-modal');
+        const frame = document.getElementById('article-frame');
+        document.getElementById('article-domain').textContent = extractDomain(url);
+        frame.src = url;
+        modal.classList.add('open');
+      },
+
+      closeArticle() {
+        const modal = document.getElementById('article-modal');
+        const frame = document.getElementById('article-frame');
+        modal.classList.remove('open');
+        frame.src = '';
       },
 
       /* ───── Settings ───── */
