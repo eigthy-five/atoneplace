@@ -190,6 +190,18 @@
     .change.up { color: var(--green); }
     .change.down { color: var(--red); }
 
+    .ah-line {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .ah-line .ah-label {
+      font-weight: 600;
+      font-size: 10px;
+      opacity: 0.7;
+    }
+
     .section-divider td {
       padding: 20px 0 8px;
       font-size: 11px;
@@ -632,6 +644,11 @@
                 pctChange: s.change,
                 currency: 'USD',
                 mktCap: s.mktCap,
+                marketState: s.marketState,
+                postPrice: s.postPrice,
+                postChange: s.postChange,
+                prePrice: s.prePrice,
+                preChange: s.preChange,
               }));
 
             const cryptoRows = (crypto || []).map(c => ({
@@ -662,9 +679,19 @@
               <tbody>${rows.map(r => {
                 if (r.section) return `<tr class="section-divider"><td colspan="3">${r.section}</td></tr>`;
                 if (r.needsKey) return `<tr><td colspan="3" style="color:var(--text-muted);font-size:13px;padding:16px 0">API key required — <a href="#" onclick="App.openSettings();return false" style="color:var(--accent);text-decoration:none">Configure in Settings</a></td></tr>`;
+                let ahHTML = '';
+                if (r.postPrice && r.marketState && r.marketState !== 'REGULAR') {
+                  const cls = (r.postChange || 0) >= 0 ? 'up' : 'down';
+                  const sign = (r.postChange || 0) >= 0 ? '+' : '';
+                  ahHTML = `<div class="ah-line"><span class="ah-label">AH</span> ${fmtPrice(r.postPrice, r.currency)} <span class="change ${cls}">${sign}${(r.postChange || 0).toFixed(2)}%</span></div>`;
+                } else if (r.prePrice && r.marketState === 'PRE') {
+                  const cls = (r.preChange || 0) >= 0 ? 'up' : 'down';
+                  const sign = (r.preChange || 0) >= 0 ? '+' : '';
+                  ahHTML = `<div class="ah-line"><span class="ah-label">PM</span> ${fmtPrice(r.prePrice, r.currency)} <span class="change ${cls}">${sign}${(r.preChange || 0).toFixed(2)}%</span></div>`;
+                }
                 return `<tr>
                   <td>${r.name}<br><span class="ticker-sub">${r.sub || ''}</span></td>
-                  <td>${fmtPrice(r.price, r.currency)}${r.pctChange != null ? '<br>' + changeHTML(r.pctChange) : ''}</td>
+                  <td>${fmtPrice(r.price, r.currency)}${r.pctChange != null ? '<br>' + changeHTML(r.pctChange) : ''}${ahHTML}</td>
                   <td>${fmtMktCap(r.mktCap)}</td>
                 </tr>`;
               }).join('')}</tbody>

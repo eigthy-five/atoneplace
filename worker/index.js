@@ -51,6 +51,11 @@ export default {
           price: q.regularMarketPrice,
           change: q.regularMarketChangePercent,
           mktCap: q.marketCap || null,
+          marketState: q.marketState || null,
+          postPrice: q.postMarketPrice || null,
+          postChange: q.postMarketChangePercent || null,
+          prePrice: q.preMarketPrice || null,
+          preChange: q.preMarketChangePercent || null,
         }));
         return jsonResp(results);
       } catch (e) {
