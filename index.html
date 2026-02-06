@@ -475,6 +475,65 @@
 
     .standings-table tr:hover { background: var(--surface-hover); }
 
+    /* ───── NBA Stats ───── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 700px) {
+      .stats-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (min-width: 701px) and (max-width: 1000px) {
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+    }
+
+    .stat-card h4 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .stat-card .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat-card .stat-row:last-child { border-bottom: none; }
+
+    .stat-card .stat-rank {
+      color: var(--text-muted);
+      font-size: 11px;
+      width: 20px;
+      flex-shrink: 0;
+    }
+
+    .stat-card .stat-name {
+      flex: 1;
+      font-weight: 500;
+    }
+
+    .stat-card .stat-val {
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      margin-left: 8px;
+    }
+
     /* ───── Placeholder Page ───── */
     .placeholder-page {
       display: flex;
@@ -828,6 +887,17 @@
         return r.json();
       },
 
+      async fetchNBALeaders(season = 2026) {
+        const r = await fetch(`https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/${season}/types/2/leaders?limit=10`);
+        return r.json();
+      },
+
+      async fetchNBAAthlete(url) {
+        const r = await fetch(url);
+        const d = await r.json();
+        return { name: d.shortName || d.displayName, pos: d.position?.abbreviation || '' };
+      },
+
       async fetchNBABoxScore(eventId) {
         const r = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=${eventId}`);
         return r.json();
@@ -1014,6 +1084,7 @@
             <div class="tab-bar">
               <button class="${tab === 'scores' ? 'active' : ''}" onclick="Pages._nbaTab='scores';Pages.nba()">Scores</button>
               <button class="${tab === 'standings' ? 'active' : ''}" onclick="Pages._nbaTab='standings';Pages.nba()">Standings</button>
+              <button class="${tab === 'stats' ? 'active' : ''}" onclick="Pages._nbaTab='stats';Pages.nba()">Stats</button>
             </div>
           </div>
           <div id="nba-content"><div class="page-loading"><div class="spinner"></div></div></div>`;
@@ -1021,8 +1092,10 @@
         try {
           if (tab === 'scores') {
             await this._nbaRenderScores(yyyymmdd);
-          } else {
+          } else if (tab === 'standings') {
             await this._nbaRenderStandings();
+          } else if (tab === 'stats') {
+            await this._nbaRenderStats();
           }
         } catch (e) {
           document.getElementById('nba-content').innerHTML = `
@@ -1198,6 +1271,73 @@
           });
 
           html += '</tbody></table></div>';
+        });
+        html += '</div>';
+        container.innerHTML = html;
+      },
+
+      _nbaAthleteCache: {},
+
+      async _nbaRenderStats() {
+        const season = this._nbaSeason || 2026;
+        const data = await API.fetchNBALeaders(season);
+        const container = document.getElementById('nba-content');
+        const categories = data.categories || [];
+
+        if (!categories.length) {
+          container.innerHTML = '<div class="no-games fade-in">Stats not available</div>';
+          return;
+        }
+
+        // Collect all unique athlete refs
+        const athleteRefs = new Map();
+        categories.forEach(cat => {
+          (cat.leaders || []).forEach(leader => {
+            const ref = leader.athlete?.$ref;
+            if (ref && !this._nbaAthleteCache[ref]) athleteRefs.set(ref, null);
+          });
+        });
+
+        // Batch resolve athlete names
+        if (athleteRefs.size) {
+          const entries = [...athleteRefs.keys()];
+          const results = await Promise.all(entries.map(url => API.fetchNBAAthlete(url).catch(() => ({ name: '?', pos: '' }))));
+          entries.forEach((url, i) => { this._nbaAthleteCache[url] = results[i]; });
+        }
+
+        const SHOW_ORDER = [
+          'pointsPerGame', 'reboundsPerGame', 'assistsPerGame',
+          'stealsPerGame', 'blocksPerGame', 'PER',
+          'fieldGoalPercentage', 'FreeThrowPct', '3PointPct',
+        ];
+        const SHORT = {
+          'pointsPerGame': 'PPG', 'assistsPerGame': 'APG', 'reboundsPerGame': 'RPG',
+          'stealsPerGame': 'SPG', 'blocksPerGame': 'BPG', 'PER': 'PER',
+          'fieldGoalPercentage': 'FG%', 'FreeThrowPct': 'FT%', '3PointPct': '3P%',
+        };
+
+        const catMap = {};
+        categories.forEach(cat => { catMap[cat.name] = cat; });
+
+        let html = '<div class="stats-grid fade-in">';
+        SHOW_ORDER.forEach(key => {
+          const cat = catMap[key];
+          if (!cat) return;
+          const label = SHORT[key] || cat.displayName || key;
+          const leaders = cat.leaders || [];
+          if (!leaders.length) return;
+
+          html += `<div class="stat-card"><h4>${label}</h4>`;
+          leaders.slice(0, 10).forEach((leader, i) => {
+            const ref = leader.athlete?.$ref;
+            const athlete = this._nbaAthleteCache[ref] || { name: '?', pos: '' };
+            html += `<div class="stat-row">
+              <span class="stat-rank">${i + 1}</span>
+              <span class="stat-name">${athlete.name}</span>
+              <span class="stat-val">${leader.displayValue}</span>
+            </div>`;
+          });
+          html += '</div>';
         });
         html += '</div>';
         container.innerHTML = html;
