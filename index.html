@@ -475,6 +475,63 @@
 
     .standings-table tr:hover { background: var(--surface-hover); }
 
+    /* ───── EPL Match Events ───── */
+    .match-events {
+      margin-top: 12px;
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
+
+    .match-event {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 4px 0;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .match-event .ev-time {
+      min-width: 40px;
+      font-weight: 600;
+      color: var(--text);
+      flex-shrink: 0;
+    }
+
+    .match-event.goal { color: var(--green); font-weight: 500; }
+    .match-event.red-card { color: var(--red); }
+    .match-event.yellow-card { color: #eab308; }
+
+    /* ───── EPL Standings ───── */
+    .epl-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .epl-table th {
+      text-align: right;
+      padding: 8px 6px;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .epl-table th:first-child, .epl-table th:nth-child(2) { text-align: left; }
+
+    .epl-table td {
+      text-align: right;
+      padding: 8px 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .epl-table td:first-child { text-align: center; width: 28px; }
+    .epl-table td:nth-child(2) { text-align: left; font-weight: 500; }
+    .epl-table tr:hover { background: var(--surface-hover); }
+
     /* ───── NBA Stats ───── */
     .stats-grid {
       display: grid;
@@ -893,6 +950,33 @@
       },
 
       async fetchNBAAthlete(url) {
+        const r = await fetch(url);
+        const d = await r.json();
+        return { name: d.shortName || d.displayName, pos: d.position?.abbreviation || '' };
+      },
+
+      async fetchEPLScoreboard(date) {
+        const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard${date ? '?dates=' + date : ''}`;
+        const r = await fetch(url);
+        return r.json();
+      },
+
+      async fetchEPLStandings(season = 2025) {
+        const r = await fetch(`https://site.api.espn.com/apis/v2/sports/soccer/eng.1/standings?season=${season}`);
+        return r.json();
+      },
+
+      async fetchEPLSummary(eventId) {
+        const r = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/summary?event=${eventId}`);
+        return r.json();
+      },
+
+      async fetchEPLLeaders(season = 2025) {
+        const r = await fetch(`https://sports.core.api.espn.com/v2/sports/soccer/leagues/eng.1/seasons/${season}/types/1/leaders?limit=10`);
+        return r.json();
+      },
+
+      async fetchEPLAthlete(url) {
         const r = await fetch(url);
         const d = await r.json();
         return { name: d.shortName || d.displayName, pos: d.position?.abbreviation || '' };
@@ -1343,14 +1427,244 @@
         container.innerHTML = html;
       },
 
-      /* ───── EPL (placeholder) ───── */
-      epl() {
-        document.getElementById('page-content').innerHTML = `
-          <div class="placeholder-page fade-in">
-            <div class="icon">&#9917;</div>
-            <h2>Premier League</h2>
-            <p>Coming soon — fixtures, results, and table.</p>
+      /* ───── EPL ───── */
+      _eplDate: null,
+      _eplTab: 'scores',
+      _eplSeason: 2025,
+      _eplEventCache: {},
+      _eplAthleteCache: {},
+
+      async epl() {
+        const content = document.getElementById('page-content');
+        if (!this._eplDate) this._eplDate = new Date();
+        const tab = this._eplTab;
+
+        const dateStr = this._eplDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const yyyymmdd = this._eplDate.getFullYear().toString() +
+          String(this._eplDate.getMonth() + 1).padStart(2, '0') +
+          String(this._eplDate.getDate()).padStart(2, '0');
+
+        content.innerHTML = `
+          <div class="nba-nav">
+            ${tab === 'scores' ? `<div class="nba-date-nav">
+              <button onclick="Pages._eplShiftDate(-1)">&lsaquo;</button>
+              <span class="date-label">${dateStr}</span>
+              <button onclick="Pages._eplShiftDate(1)">&rsaquo;</button>
+            </div>` : `<select class="nba-season-select" onchange="Pages._eplSeason=parseInt(this.value);Pages.epl()">
+              ${[2025,2024,2023,2022,2021].map(y => `<option value="${y}" ${y === (this._eplSeason || 2025) ? 'selected' : ''}>${y}-${String(y+1).slice(2)}</option>`).join('')}
+            </select>`}
+            <div class="tab-bar">
+              <button class="${tab === 'scores' ? 'active' : ''}" onclick="Pages._eplTab='scores';Pages.epl()">Scores</button>
+              <button class="${tab === 'standings' ? 'active' : ''}" onclick="Pages._eplTab='standings';Pages.epl()">Table</button>
+              <button class="${tab === 'stats' ? 'active' : ''}" onclick="Pages._eplTab='stats';Pages.epl()">Stats</button>
+            </div>
+          </div>
+          <div id="epl-content"><div class="page-loading"><div class="spinner"></div></div></div>`;
+
+        try {
+          if (tab === 'scores') await this._eplRenderScores(yyyymmdd);
+          else if (tab === 'standings') await this._eplRenderStandings();
+          else if (tab === 'stats') await this._eplRenderStats();
+        } catch (e) {
+          document.getElementById('epl-content').innerHTML = `
+            <div class="page-error">
+              <span style="font-size:28px">&#9888;</span>
+              <span>${e.message || 'Failed to load EPL data'}</span>
+              <a onclick="Pages.epl()">Retry</a>
+            </div>`;
+        }
+      },
+
+      _eplShiftDate(delta) {
+        this._eplDate.setDate(this._eplDate.getDate() + delta);
+        this.epl();
+      },
+
+      async _eplRenderScores(date) {
+        const data = await API.fetchEPLScoreboard(date);
+        const events = data.events || [];
+        const container = document.getElementById('epl-content');
+
+        if (!events.length) {
+          container.innerHTML = '<div class="no-games fade-in">No matches scheduled</div>';
+          return;
+        }
+
+        container.innerHTML = '<div class="fade-in">' + events.map(ev => {
+          const comp = ev.competitions[0];
+          const status = comp.status;
+          const isLive = status.type.state === 'in';
+          const isFinal = status.type.state === 'post';
+          const isPre = status.type.state === 'pre';
+
+          let statusText = '';
+          if (isLive) {
+            statusText = status.displayClock || 'LIVE';
+          } else if (isFinal) {
+            statusText = status.type.detail || 'FT';
+          } else {
+            statusText = new Date(ev.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+          }
+
+          const home = comp.competitors.find(c => c.homeAway === 'home');
+          const away = comp.competitors.find(c => c.homeAway === 'away');
+
+          const homeWin = isFinal && parseInt(home.score) > parseInt(away.score);
+          const awayWin = isFinal && parseInt(away.score) > parseInt(home.score);
+
+          const teamRow = (team, isWinner) => {
+            const logo = team.team.logo || '';
+            const record = team.records?.[0]?.summary || '';
+            return `<div class="game-team ${isWinner ? 'winner' : ''}">
+              <div class="team-info">
+                ${logo ? `<img src="${logo}" alt="">` : ''}
+                <span>${team.team.abbreviation} <span class="team-record">${record}</span></span>
+              </div>
+              <div class="team-score">${isPre ? '' : team.score}</div>
+            </div>`;
+          };
+
+          return `<div class="game-card ${isLive ? 'live' : ''}" id="epl-game-${ev.id}">
+            <div class="game-status ${isLive ? 'live-status' : ''}">${statusText}</div>
+            ${teamRow(home, homeWin)}
+            ${teamRow(away, awayWin)}
+            ${isFinal ? `<button class="box-score-toggle" onclick="Pages._eplToggleEvents('${ev.id}')">&#9656; Match Events</button><div id="epl-ev-${ev.id}" style="display:none"></div>` : ''}
           </div>`;
+        }).join('') + '</div>';
+      },
+
+      async _eplToggleEvents(eventId) {
+        const el = document.getElementById('epl-ev-' + eventId);
+        if (!el) return;
+
+        if (el.style.display !== 'none') {
+          el.style.display = 'none';
+          return;
+        }
+
+        el.style.display = 'block';
+        if (el.innerHTML) return;
+
+        el.innerHTML = '<div class="page-loading" style="padding:12px 0"><div class="spinner"></div></div>';
+
+        try {
+          const data = this._eplEventCache[eventId] || await API.fetchEPLSummary(eventId);
+          this._eplEventCache[eventId] = data;
+
+          const keyEvents = (data.keyEvents || []).filter(e => {
+            const t = e.type?.text || '';
+            return t === 'Goal' || t === 'Yellow Card' || t === 'Red Card';
+          });
+
+          if (!keyEvents.length) {
+            el.innerHTML = '<div style="padding:8px 0;color:var(--text-muted);font-size:12px">No key events</div>';
+            return;
+          }
+
+          let html = '<div class="match-events">';
+          keyEvents.forEach(e => {
+            const t = e.type?.text || '';
+            const time = e.clock?.displayValue || '';
+            const text = e.text || '';
+            let cls = '';
+            let icon = '';
+            if (t === 'Goal') { cls = 'goal'; icon = '\u26BD'; }
+            else if (t === 'Yellow Card') { cls = 'yellow-card'; icon = '\uD83D\uDFE8'; }
+            else if (t === 'Red Card') { cls = 'red-card'; icon = '\uD83D\uDFE5'; }
+            html += `<div class="match-event ${cls}"><span class="ev-time">${time}</span><span>${icon} ${text}</span></div>`;
+          });
+          html += '</div>';
+          el.innerHTML = html;
+        } catch {
+          el.innerHTML = '<div style="padding:8px 0;color:var(--text-muted);font-size:12px">Failed to load events</div>';
+        }
+      },
+
+      async _eplRenderStandings() {
+        const season = this._eplSeason || 2025;
+        const data = await API.fetchEPLStandings(season);
+        const container = document.getElementById('epl-content');
+        const entries = data.children?.[0]?.standings?.entries || [];
+
+        if (!entries.length) {
+          container.innerHTML = '<div class="no-games fade-in">Standings not available</div>';
+          return;
+        }
+
+        entries.sort((a, b) => {
+          const aR = a.stats?.find(s => s.name === 'rank')?.value || 99;
+          const bR = b.stats?.find(s => s.name === 'rank')?.value || 99;
+          return aR - bR;
+        });
+
+        let html = '<div class="fade-in"><table class="epl-table"><thead><tr><th>#</th><th>Team</th><th>GP</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>';
+        entries.forEach((entry, i) => {
+          const team = entry.team?.abbreviation || entry.team?.shortDisplayName || '?';
+          const stats = entry.stats || [];
+          const s = name => stats.find(s => s.name === name)?.displayValue || '0';
+          html += `<tr><td>${i + 1}</td><td>${team}</td><td>${s('gamesPlayed')}</td><td>${s('wins')}</td><td>${s('ties')}</td><td>${s('losses')}</td><td>${s('pointDifferential')}</td><td><strong>${s('points')}</strong></td></tr>`;
+        });
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+      },
+
+      async _eplRenderStats() {
+        const season = this._eplSeason || 2025;
+        const data = await API.fetchEPLLeaders(season);
+        const container = document.getElementById('epl-content');
+        const categories = data.categories || [];
+
+        if (!categories.length) {
+          container.innerHTML = '<div class="no-games fade-in">Stats not available</div>';
+          return;
+        }
+
+        // Collect athlete refs
+        const athleteRefs = new Map();
+        categories.forEach(cat => {
+          (cat.leaders || []).forEach(leader => {
+            const ref = leader.athlete?.$ref;
+            if (ref && !this._eplAthleteCache[ref]) athleteRefs.set(ref, null);
+          });
+        });
+
+        if (athleteRefs.size) {
+          const entries = [...athleteRefs.keys()];
+          const results = await Promise.all(entries.map(url => API.fetchEPLAthlete(url).catch(() => ({ name: '?', pos: '' }))));
+          entries.forEach((url, i) => { this._eplAthleteCache[url] = results[i]; });
+        }
+
+        const SHOW_ORDER = ['goals', 'assists', 'shotsOnTarget', 'yellowCards', 'redCards', 'foulsCommitted'];
+        const SHORT = {
+          'goals': 'Goals', 'assists': 'Assists', 'shotsOnTarget': 'Shots on Target',
+          'yellowCards': 'Yellow Cards', 'redCards': 'Red Cards', 'foulsCommitted': 'Fouls',
+        };
+
+        const catMap = {};
+        categories.forEach(cat => { catMap[cat.name] = cat; });
+
+        let html = '<div class="stats-grid fade-in">';
+        SHOW_ORDER.forEach(key => {
+          const cat = catMap[key];
+          if (!cat) return;
+          const label = SHORT[key] || cat.displayName || key;
+          const leaders = cat.leaders || [];
+          if (!leaders.length) return;
+
+          html += `<div class="stat-card"><h4>${label}</h4>`;
+          leaders.slice(0, 10).forEach((leader, i) => {
+            const ref = leader.athlete?.$ref;
+            const athlete = this._eplAthleteCache[ref] || { name: '?', pos: '' };
+            html += `<div class="stat-row">
+              <span class="stat-rank">${i + 1}</span>
+              <span class="stat-name">${athlete.name}</span>
+              <span class="stat-val">${leader.displayValue}</span>
+            </div>`;
+          });
+          html += '</div>';
+        });
+        html += '</div>';
+        container.innerHTML = html;
       },
     };
 
