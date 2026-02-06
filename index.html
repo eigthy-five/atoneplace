@@ -430,7 +430,7 @@
     const DEFAULT_STATE = {
       theme: 'dark',
       activePage: 'finance',
-      apiKeys: { finnhub: '' },
+      apiKeys: {},
       config: {
         stocks: { symbols: ['AAPL','MSFT','NVDA','GOOGL','AMZN','META','BRK.B','TSLA','AVGO','LLY'] },
         crypto: { coins: ['bitcoin'] },
@@ -536,28 +536,10 @@
         return { indices };
       },
 
-      async fetchStockQuote(symbol, key) {
-        const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${key}`);
+      async fetchStocks(symbols) {
+        const PROXY = 'https://atoneplace-proxy.viveknv4.workers.dev';
+        const r = await fetch(`${PROXY}/quote?symbols=${encodeURIComponent(symbols.join(','))}`);
         return r.json();
-      },
-
-      async fetchStockProfile(symbol, key) {
-        // Check cache (24h TTL)
-        const cache = Store.get().profileCache || {};
-        const cached = cache[symbol];
-        if (cached && Date.now() - cached.ts < 86400000) {
-          return { name: cached.name, mktCap: cached.mktCap };
-        }
-        const r = await fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${symbol}&token=${key}`);
-        const d = await r.json();
-        const profile = {
-          name: d.name || symbol,
-          mktCap: d.marketCapitalization ? d.marketCapitalization * 1e6 : null, // Finnhub returns in millions
-        };
-        // Save to cache
-        const updated = { ...cache, [symbol]: { ...profile, ts: Date.now() } };
-        Store.set({ profileCache: updated });
-        return profile;
       },
 
       async fetchCrypto(coins) {
@@ -583,44 +565,16 @@
 
         try {
           const state = Store.get();
-          const key = state.apiKeys.finnhub;
           const stockSymbols = state.config.stocks?.symbols || DEFAULT_STATE.config.stocks.symbols;
-          const cryptoCoins = ['bitcoin'];
 
           // Fetch all data in parallel
-          const promises = [
+          const [metals, forex, crypto, indices, stocks] = await Promise.all([
             API.fetchMetals().catch(() => null),
             API.fetchForex().catch(() => null),
-            API.fetchCrypto(cryptoCoins).catch(() => []),
+            API.fetchCrypto(['bitcoin']).catch(() => []),
             API.fetchIndices().catch(() => null),
-          ];
-
-          // Stock data (only if Finnhub key present)
-          let stockPromise;
-          if (key) {
-            stockPromise = (async () => {
-              const results = [];
-              for (const sym of stockSymbols) {
-                const [quote, profile] = await Promise.all([
-                  API.fetchStockQuote(sym, key).catch(() => null),
-                  API.fetchStockProfile(sym, key).catch(() => ({ name: sym, mktCap: null })),
-                ]);
-                results.push({
-                  symbol: sym,
-                  name: profile.name,
-                  price: quote?.c,
-                  change: quote?.dp,
-                  mktCap: profile.mktCap,
-                });
-              }
-              return results;
-            })();
-          } else {
-            stockPromise = Promise.resolve(null);
-          }
-          promises.push(stockPromise);
-
-          const [metals, forex, crypto, indices, stocks] = await Promise.all(promises);
+            API.fetchStocks(stockSymbols).catch(() => []),
+          ]);
 
           // Build rows
           const rows = [];
@@ -668,8 +622,8 @@
           }
 
           // Merge stocks + crypto sorted by market cap
-          if (stocks) {
-            const stockRows = stocks
+          {
+            const stockRows = (stocks || [])
               .filter(s => s.price)
               .map(s => ({
                 name: s.name,
@@ -694,16 +648,6 @@
             if (merged.length) {
               rows.push({ section: 'Stocks' });
               rows.push(...merged);
-            }
-          } else if (key === '') {
-            // No Finnhub key — show prompt + crypto that loaded
-            rows.push({ section: 'Stocks' });
-            rows.push({ needsKey: true, keyName: 'Finnhub', settingsLink: true });
-            if (crypto && crypto.length) {
-              crypto.forEach(c => rows.push({
-                name: c.name, sub: c.symbol?.toUpperCase(), price: c.current_price,
-                pctChange: c.price_change_percentage_24h, currency: 'USD', mktCap: c.market_cap,
-              }));
             }
           }
 
@@ -820,11 +764,6 @@
       },
 
       saveSettingsInputs() {
-        const keyEl = document.getElementById('key-finnhub');
-        if (keyEl) {
-          Store.set({ apiKeys: { ...Store.get().apiKeys, finnhub: keyEl.value.trim() } });
-        }
-
         const stocksEl = document.getElementById('cfg-stocks');
         if (stocksEl) {
           const symbols = stocksEl.value.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
@@ -841,19 +780,8 @@
       renderSettings() {
         const state = Store.get();
         const stocks = (state.config.stocks?.symbols || DEFAULT_STATE.config.stocks.symbols).join(', ');
-        const finnhubKey = state.apiKeys.finnhub || '';
 
         document.getElementById('settings-body').innerHTML = `
-          <div class="settings-section">
-            <h3>API Keys</h3>
-            <div>
-              <div class="setting-label">Finnhub</div>
-              <div class="setting-desc">Stocks data</div>
-              <input class="setting-input" type="password" id="key-finnhub" value="${finnhubKey}" placeholder="Enter API key">
-              <div class="api-key-help">Free: <a href="https://finnhub.io/register" target="_blank">finnhub.io/register</a></div>
-            </div>
-          </div>
-
           <div class="settings-section">
             <h3>Finance</h3>
             <div style="margin-bottom:16px">
