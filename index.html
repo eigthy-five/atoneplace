@@ -591,6 +591,48 @@
       margin-left: 8px;
     }
 
+    /* ───── News ───── */
+    .news-list { padding-top: 4px; }
+
+    .news-item {
+      display: block;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+      text-decoration: none;
+      color: var(--text);
+      transition: background var(--transition);
+    }
+
+    .news-item:hover { background: var(--surface); margin: 0 -16px; padding: 14px 16px; }
+
+    .news-item .news-title {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .news-item .news-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .news-item .news-meta .dot::before { content: '\00B7'; }
+
+    .news-item .news-time {
+      margin-left: auto;
+      flex-shrink: 0;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
     /* ───── Calendar ───── */
     .cal-header {
       display: flex;
@@ -869,6 +911,7 @@
         <option value="finance">FIN</option>
         <option value="nba">NBA</option>
         <option value="epl">EPL</option>
+        <option value="news">NEWS</option>
         <option value="cal">CAL</option>
       </select>
       <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme">
@@ -952,6 +995,18 @@
       return `<span class="change ${cls}">${sign}${pct.toFixed(2)}%</span>`;
     }
 
+    function timeAgo(ts) {
+      const sec = Math.floor((Date.now() - (typeof ts === 'number' ? ts * 1000 : new Date(ts).getTime())) / 1000);
+      if (sec < 60) return 'now';
+      if (sec < 3600) return Math.floor(sec / 60) + 'm ago';
+      if (sec < 86400) return Math.floor(sec / 3600) + 'h ago';
+      return Math.floor(sec / 86400) + 'd ago';
+    }
+
+    function extractDomain(url) {
+      try { return new URL(url).hostname.replace('www.', ''); } catch { return ''; }
+    }
+
     /* =====================================================
        API LAYER
     ===================================================== */
@@ -1030,6 +1085,35 @@
         const r = await fetch(url);
         const d = await r.json();
         return { name: d.shortName || d.displayName, pos: d.position?.abbreviation || '' };
+      },
+
+      async fetchHNTopStories(limit = 20) {
+        const ids = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json').then(r => r.json());
+        const items = await Promise.all(
+          ids.slice(0, limit).map(id =>
+            fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(r => r.json()).catch(() => null)
+          )
+        );
+        return items.filter(Boolean);
+      },
+
+      async fetchFinanceNews() {
+        const feeds = [
+          'https://feeds.finance.yahoo.com/rss/2.0/headline?s=AAPL,MSFT&region=US&lang=en-US',
+          'https://www.cnbc.com/id/100003114/device/rss/rss.html',
+        ];
+        const results = await Promise.all(feeds.map(url =>
+          fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`)
+            .then(r => r.json())
+            .then(d => (d.items || []).map(item => ({
+              title: item.title,
+              link: item.link,
+              time: item.pubDate,
+              source: extractDomain(item.link),
+            })))
+            .catch(() => [])
+        ));
+        return results.flat().sort((a, b) => new Date(b.time) - new Date(a.time));
       },
 
       async fetchEPLScoreboard(date) {
@@ -1742,6 +1826,82 @@
         });
         html += '</div>';
         container.innerHTML = html;
+      },
+
+      /* ───── News ───── */
+      _newsTab: 'tech',
+
+      async news() {
+        const content = document.getElementById('page-content');
+        const tab = this._newsTab;
+
+        content.innerHTML = `
+          <div class="nba-nav">
+            <div></div>
+            <div class="tab-bar">
+              <button class="${tab === 'tech' ? 'active' : ''}" onclick="Pages._newsTab='tech';Pages.news()">Tech</button>
+              <button class="${tab === 'finance' ? 'active' : ''}" onclick="Pages._newsTab='finance';Pages.news()">Finance</button>
+            </div>
+          </div>
+          <div id="news-content"><div class="page-loading"><div class="spinner"></div></div></div>`;
+
+        try {
+          if (tab === 'tech') await this._newsRenderTech();
+          else await this._newsRenderFinance();
+        } catch (e) {
+          document.getElementById('news-content').innerHTML = `
+            <div class="page-error">
+              <span style="font-size:28px">&#9888;</span>
+              <span>${e.message || 'Failed to load news'}</span>
+              <a onclick="Pages.news()">Retry</a>
+            </div>`;
+        }
+      },
+
+      async _newsRenderTech() {
+        const stories = await API.fetchHNTopStories(20);
+        const container = document.getElementById('news-content');
+
+        if (!stories.length) {
+          container.innerHTML = '<div class="no-games fade-in">No stories available</div>';
+          return;
+        }
+
+        container.innerHTML = '<div class="news-list fade-in">' + stories.map(s => {
+          const domain = s.url ? extractDomain(s.url) : 'news.ycombinator.com';
+          const href = s.url || `https://news.ycombinator.com/item?id=${s.id}`;
+          return `<a class="news-item" href="${href}" target="_blank" rel="noopener">
+            <div class="news-title">${s.title}</div>
+            <div class="news-meta">
+              <span>${domain}</span>
+              <span class="dot"></span>
+              <span>${s.score} pts</span>
+              <span class="dot"></span>
+              <span>${s.descendants || 0} comments</span>
+              <span class="news-time">${timeAgo(s.time)}</span>
+            </div>
+          </a>`;
+        }).join('') + '</div>';
+      },
+
+      async _newsRenderFinance() {
+        const items = await API.fetchFinanceNews();
+        const container = document.getElementById('news-content');
+
+        if (!items.length) {
+          container.innerHTML = '<div class="no-games fade-in">No news available</div>';
+          return;
+        }
+
+        container.innerHTML = '<div class="news-list fade-in">' + items.map(item => {
+          return `<a class="news-item" href="${item.link}" target="_blank" rel="noopener">
+            <div class="news-title">${item.title}</div>
+            <div class="news-meta">
+              <span>${item.source}</span>
+              <span class="news-time">${timeAgo(item.time)}</span>
+            </div>
+          </a>`;
+        }).join('') + '</div>';
       },
 
       /* ───── Calendar ───── */
