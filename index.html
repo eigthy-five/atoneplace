@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>atoneplace</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <style>
+    /* ───── Reset & Base ───── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --surface-hover: #1a1a1a;
+      --border: #232323;
+      --text: #e5e5e5;
+      --text-muted: #777;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --green: #22c55e;
+      --red: #ef4444;
+      --radius: 12px;
+      --transition: 0.2s ease;
+    }
+
+    [data-theme="light"] {
+      --bg: #f5f5f5;
+      --surface: #ffffff;
+      --surface-hover: #fafafa;
+      --border: #e5e5e5;
+      --text: #1a1a1a;
+      --text-muted: #666;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --green: #16a34a;
+      --red: #dc2626;
+    }
+
+    html {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      min-height: 100dvh;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    /* ───── Header ───── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+
+    header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .header-actions { display: flex; gap: 8px; }
+
+    .icon-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      transition: background var(--transition);
+    }
+
+    .icon-btn:hover { background: var(--surface-hover); }
+
+    /* ───── Widget Grid ───── */
+    #widget-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      padding: 16px 20px 100px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    @media (min-width: 640px) {
+      #widget-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (min-width: 1024px) {
+      #widget-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    /* ───── Widget Card ───── */
+    .widget {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    .widget-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .widget-title {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .widget-title .icon { font-size: 16px; }
+
+    .widget-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .widget-body {
+      padding: 12px 16px 16px;
+      min-height: 80px;
+    }
+
+    .widget-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .widget-actions button {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px;
+      border-radius: 6px;
+      transition: color var(--transition);
+    }
+
+    .widget-actions button:hover { color: var(--text); }
+
+    .refresh-spin { animation: spin 0.8s linear infinite; }
+
+    /* ───── Widget Content Styles ───── */
+    .stock-row, .crypto-row, .game-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stock-row:last-child, .crypto-row:last-child, .game-row:last-child {
+      border-bottom: none;
+    }
+
+    .ticker-symbol {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .ticker-name {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .ticker-price {
+      text-align: right;
+    }
+
+    .ticker-price .price {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .ticker-price .change {
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .change.up { color: var(--green); }
+    .change.down { color: var(--red); }
+
+    .game-teams {
+      flex: 1;
+    }
+
+    .game-team {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 0;
+      font-size: 13px;
+    }
+
+    .game-team .score {
+      font-weight: 700;
+      min-width: 24px;
+      text-align: right;
+    }
+
+    .game-status {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 4px 8px;
+      margin-left: 12px;
+      white-space: nowrap;
+    }
+
+    .game-status.live {
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* ───── Empty / Loading / Error States ───── */
+    .widget-empty, .widget-loading, .widget-error {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px 0;
+      gap: 8px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .widget-empty .icon, .widget-error .icon {
+      font-size: 28px;
+      margin-bottom: 4px;
+    }
+
+    .widget-error .icon { color: var(--red); }
+
+    .widget-empty a, .widget-error a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .widget-loading .spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* ───── Settings Panel ───── */
+    #settings-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 98;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    #settings-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #settings-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: min(380px, 90vw);
+      background: var(--bg);
+      border-left: 1px solid var(--border);
+      z-index: 99;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    #settings-panel.open { transform: translateX(0); }
+
+    .settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 1;
+    }
+
+    .settings-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .settings-section {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .settings-section h3 {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+    }
+
+    .setting-label {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .setting-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Toggle Switch */
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      left: 3px;
+      top: 3px;
+      width: 18px;
+      height: 18px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform var(--transition);
+    }
+
+    .toggle input:checked + .toggle-slider {
+      background: var(--accent);
+    }
+
+    .toggle input:checked + .toggle-slider::before {
+      transform: translateX(20px);
+    }
+
+    /* Text Input */
+    .setting-input {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      outline: none;
+      transition: border-color var(--transition);
+      margin-top: 6px;
+    }
+
+    .setting-input:focus { border-color: var(--accent); }
+
+    .setting-input::placeholder { color: var(--text-muted); }
+
+    .api-key-help {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .api-key-help a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* ───── No Widgets Empty State ───── */
+    .no-widgets {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+      text-align: center;
+      gap: 12px;
+    }
+
+    .no-widgets .icon { font-size: 48px; }
+
+    .no-widgets p { font-size: 15px; }
+
+    .no-widgets button {
+      margin-top: 8px;
+      padding: 10px 20px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ───── Animations ───── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>atoneplace</h1>
+    <div class="header-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme">
+        <span id="theme-icon">&#9789;</span>
+      </button>
+      <button class="icon-btn" id="settings-btn" aria-label="Settings">
+        &#9881;
+      </button>
+    </div>
+  </header>
+
+  <main id="widget-grid"></main>
+
+  <div id="settings-overlay"></div>
+  <aside id="settings-panel">
+    <div class="settings-header">
+      <h2>Settings</h2>
+      <button class="icon-btn" id="settings-close">&times;</button>
+    </div>
+    <div id="settings-body"></div>
+  </aside>
+
+  <script>
+    /* =====================================================
+       STATE
+    ===================================================== */
+    const DEFAULT_STATE = {
+      theme: 'dark',
+      activeWidgets: ['stocks', 'crypto', 'nba', 'epl'],
+      apiKeys: { finnhub: '', balldontlie: '', footballdata: '' },
+      config: {
+        stocks: { symbols: ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA'] },
+        crypto: { coins: ['bitcoin', 'ethereum', 'solana', 'cardano'] },
+      },
+      refreshMinutes: 5,
+    };
+
+    const Store = {
+      _state: null,
+      get() {
+        if (!this._state) {
+          try {
+            const saved = localStorage.getItem('atoneplace');
+            this._state = saved ? { ...DEFAULT_STATE, ...JSON.parse(saved) } : { ...DEFAULT_STATE };
+          } catch {
+            this._state = { ...DEFAULT_STATE };
+          }
+        }
+        return this._state;
+      },
+      set(partial) {
+        this._state = { ...this.get(), ...partial };
+        localStorage.setItem('atoneplace', JSON.stringify(this._state));
+      },
+    };
+
+    /* =====================================================
+       WIDGET REGISTRY
+    ===================================================== */
+    const WIDGETS = {
+      stocks: {
+        id: 'stocks',
+        name: 'Stocks',
+        icon: '\u25B2',
+        needsKey: 'finnhub',
+        keyUrl: 'https://finnhub.io/register',
+        keyLabel: 'Finnhub API Key',
+        async fetch() {
+          const key = Store.get().apiKeys.finnhub;
+          if (!key) return null;
+          const symbols = Store.get().config.stocks?.symbols || DEFAULT_STATE.config.stocks.symbols;
+          const results = await Promise.all(
+            symbols.map(s =>
+              fetch(`https://finnhub.io/api/v1/quote?symbol=${s}&token=${key}`)
+                .then(r => r.json())
+                .then(d => ({ symbol: s, price: d.c, change: d.d, pctChange: d.dp }))
+            )
+          );
+          return results.filter(r => r.price);
+        },
+        render(data) {
+          if (!data || !data.length) return '<div class="widget-empty"><span class="icon">\u25B2</span>No data</div>';
+          return data.map(s => `
+            <div class="stock-row">
+              <div>
+                <div class="ticker-symbol">${s.symbol}</div>
+              </div>
+              <div class="ticker-price">
+                <div class="price">$${s.price?.toFixed(2) ?? '—'}</div>
+                <div class="change ${s.change >= 0 ? 'up' : 'down'}">
+                  ${s.change >= 0 ? '+' : ''}${s.change?.toFixed(2) ?? '0'} (${s.pctChange?.toFixed(2) ?? '0'}%)
+                </div>
+              </div>
+            </div>
+          `).join('');
+        },
+        configHTML() {
+          const syms = (Store.get().config.stocks?.symbols || DEFAULT_STATE.config.stocks.symbols).join(', ');
+          return `
+            <div style="margin-top:8px">
+              <label class="setting-desc">Symbols (comma separated)</label>
+              <input class="setting-input" id="cfg-stocks-symbols" value="${syms}" placeholder="AAPL, GOOGL, MSFT">
+            </div>`;
+        },
+        saveConfig() {
+          const el = document.getElementById('cfg-stocks-symbols');
+          if (!el) return;
+          const symbols = el.value.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+          const config = { ...Store.get().config, stocks: { symbols } };
+          Store.set({ config });
+        },
+      },
+
+      crypto: {
+        id: 'crypto',
+        name: 'Crypto',
+        icon: '\u20BF',
+        needsKey: null,
+        async fetch() {
+          const coins = Store.get().config.crypto?.coins || DEFAULT_STATE.config.crypto.coins;
+          const ids = coins.join(',');
+          const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
+          const d = await r.json();
+          return coins.map(c => ({
+            id: c,
+            name: c.charAt(0).toUpperCase() + c.slice(1),
+            price: d[c]?.usd,
+            change24h: d[c]?.usd_24h_change,
+          })).filter(c => c.price != null);
+        },
+        render(data) {
+          if (!data || !data.length) return '<div class="widget-empty"><span class="icon">\u20BF</span>No data</div>';
+          return data.map(c => `
+            <div class="crypto-row">
+              <div>
+                <div class="ticker-symbol">${c.name}</div>
+              </div>
+              <div class="ticker-price">
+                <div class="price">$${c.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div class="change ${c.change24h >= 0 ? 'up' : 'down'}">
+                  ${c.change24h >= 0 ? '+' : ''}${c.change24h?.toFixed(2)}%
+                </div>
+              </div>
+            </div>
+          `).join('');
+        },
+        configHTML() {
+          const coins = (Store.get().config.crypto?.coins || DEFAULT_STATE.config.crypto.coins).join(', ');
+          return `
+            <div style="margin-top:8px">
+              <label class="setting-desc">Coins (CoinGecko IDs, comma separated)</label>
+              <input class="setting-input" id="cfg-crypto-coins" value="${coins}" placeholder="bitcoin, ethereum, solana">
+            </div>`;
+        },
+        saveConfig() {
+          const el = document.getElementById('cfg-crypto-coins');
+          if (!el) return;
+          const coins = el.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+          const config = { ...Store.get().config, crypto: { coins } };
+          Store.set({ config });
+        },
+      },
+
+      nba: {
+        id: 'nba',
+        name: 'NBA Scores',
+        icon: '\uD83C\uDFC0',
+        needsKey: 'balldontlie',
+        keyUrl: 'https://www.balldontlie.io',
+        keyLabel: 'BallDontLie API Key',
+        async fetch() {
+          const key = Store.get().apiKeys.balldontlie;
+          if (!key) return null;
+          const today = new Date().toISOString().split('T')[0];
+          const r = await fetch(`https://api.balldontlie.io/v1/games?dates[]=${today}`, {
+            headers: { Authorization: key },
+          });
+          const d = await r.json();
+          return (d.data || []).map(g => ({
+            home: g.home_team?.full_name || g.home_team?.name || '—',
+            away: g.visitor_team?.full_name || g.visitor_team?.name || '—',
+            homeScore: g.home_team_score,
+            awayScore: g.visitor_team_score,
+            status: g.status || '',
+            time: g.time || '',
+          }));
+        },
+        render(data) {
+          if (!data || !data.length) return '<div class="widget-empty"><span class="icon">\uD83C\uDFC0</span>No games today</div>';
+          return data.map(g => {
+            const live = g.status && !['Final', 'Not Started', ''].includes(g.status);
+            return `
+              <div class="game-row">
+                <div class="game-teams">
+                  <div class="game-team"><span>${g.away}</span><span class="score">${g.awayScore ?? '—'}</span></div>
+                  <div class="game-team"><span>${g.home}</span><span class="score">${g.homeScore ?? '—'}</span></div>
+                </div>
+                <div class="game-status ${live ? 'live' : ''}">${g.status === 'Final' ? 'Final' : live ? g.time || 'Live' : g.status || 'TBD'}</div>
+              </div>`;
+          }).join('');
+        },
+      },
+
+      epl: {
+        id: 'epl',
+        name: 'Premier League',
+        icon: '\u26BD',
+        needsKey: 'footballdata',
+        keyUrl: 'https://www.football-data.org/client/register',
+        keyLabel: 'Football-Data.org API Key',
+        async fetch() {
+          const key = Store.get().apiKeys.footballdata;
+          if (!key) return null;
+          const today = new Date().toISOString().split('T')[0];
+          const r = await fetch(
+            `https://api.football-data.org/v4/competitions/PL/matches?dateFrom=${today}&dateTo=${today}`,
+            { headers: { 'X-Auth-Token': key } }
+          );
+          const d = await r.json();
+          return (d.matches || []).map(m => ({
+            home: m.homeTeam?.shortName || m.homeTeam?.name || '—',
+            away: m.awayTeam?.shortName || m.awayTeam?.name || '—',
+            homeScore: m.score?.fullTime?.home,
+            awayScore: m.score?.fullTime?.away,
+            status: m.status,
+          }));
+        },
+        render(data) {
+          if (!data || !data.length) return '<div class="widget-empty"><span class="icon">\u26BD</span>No matches today</div>';
+          return data.map(m => {
+            const statusMap = { FINISHED: 'FT', IN_PLAY: 'Live', PAUSED: 'HT', TIMED: 'Scheduled', SCHEDULED: 'Scheduled' };
+            const label = statusMap[m.status] || m.status;
+            const live = ['IN_PLAY', 'PAUSED'].includes(m.status);
+            return `
+              <div class="game-row">
+                <div class="game-teams">
+                  <div class="game-team"><span>${m.home}</span><span class="score">${m.homeScore ?? '—'}</span></div>
+                  <div class="game-team"><span>${m.away}</span><span class="score">${m.awayScore ?? '—'}</span></div>
+                </div>
+                <div class="game-status ${live ? 'live' : ''}">${label}</div>
+              </div>`;
+          }).join('');
+        },
+      },
+    };
+
+    /* =====================================================
+       APP CONTROLLER
+    ===================================================== */
+    const App = {
+      refreshTimer: null,
+      widgetData: {},
+
+      init() {
+        this.applyTheme();
+        this.renderGrid();
+        this.refreshAll();
+        this.bindEvents();
+        this.startAutoRefresh();
+        this.registerSW();
+      },
+
+      applyTheme() {
+        const theme = Store.get().theme;
+        document.documentElement.setAttribute('data-theme', theme);
+        document.getElementById('theme-icon').innerHTML = theme === 'dark' ? '&#9789;' : '&#9788;';
+        document.querySelector('meta[name="theme-color"]').content = theme === 'dark' ? '#0a0a0a' : '#f5f5f5';
+      },
+
+      toggleTheme() {
+        Store.set({ theme: Store.get().theme === 'dark' ? 'light' : 'dark' });
+        this.applyTheme();
+      },
+
+      renderGrid() {
+        const grid = document.getElementById('widget-grid');
+        const active = Store.get().activeWidgets;
+
+        if (!active.length) {
+          grid.innerHTML = `
+            <div class="no-widgets">
+              <div class="icon">&#9881;</div>
+              <p>No widgets enabled. Open settings to add some.</p>
+              <button onclick="App.openSettings()">Open Settings</button>
+            </div>`;
+          return;
+        }
+
+        grid.innerHTML = active.map((id, i) => {
+          const w = WIDGETS[id];
+          if (!w) return '';
+          return `
+            <div class="widget" style="animation-delay:${i * 0.05}s">
+              <div class="widget-header">
+                <div class="widget-title"><span class="icon">${w.icon}</span> ${w.name}</div>
+                <div class="widget-actions">
+                  <button onclick="App.refreshWidget('${id}')" title="Refresh" id="refresh-${id}">&#8635;</button>
+                </div>
+              </div>
+              <div class="widget-body" id="body-${id}">
+                <div class="widget-loading"><div class="spinner"></div></div>
+              </div>
+              <div class="widget-meta" id="meta-${id}" style="padding:0 16px 10px;"></div>
+            </div>`;
+        }).join('');
+      },
+
+      async refreshWidget(id) {
+        const w = WIDGETS[id];
+        if (!w) return;
+        const body = document.getElementById(`body-${id}`);
+        const meta = document.getElementById(`meta-${id}`);
+        const refreshBtn = document.getElementById(`refresh-${id}`);
+        if (!body) return;
+
+        // Spin the refresh button
+        if (refreshBtn) refreshBtn.classList.add('refresh-spin');
+
+        // If API key is needed but not set
+        if (w.needsKey && !Store.get().apiKeys[w.needsKey]) {
+          body.innerHTML = `
+            <div class="widget-empty">
+              <span class="icon">&#128273;</span>
+              <span>API key required</span>
+              <a href="#" onclick="App.openSettings();return false">Configure in Settings</a>
+            </div>`;
+          if (refreshBtn) refreshBtn.classList.remove('refresh-spin');
+          return;
+        }
+
+        try {
+          const data = await w.fetch();
+          this.widgetData[id] = data;
+          body.innerHTML = w.render(data);
+          if (meta) meta.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+        } catch (e) {
+          body.innerHTML = `
+            <div class="widget-error">
+              <span class="icon">&#9888;</span>
+              <span>${e.message || 'Failed to load'}</span>
+              <a href="#" onclick="App.refreshWidget('${id}');return false">Retry</a>
+            </div>`;
+        }
+
+        if (refreshBtn) refreshBtn.classList.remove('refresh-spin');
+      },
+
+      refreshAll() {
+        Store.get().activeWidgets.forEach(id => this.refreshWidget(id));
+      },
+
+      startAutoRefresh() {
+        if (this.refreshTimer) clearInterval(this.refreshTimer);
+        const mins = Store.get().refreshMinutes || 5;
+        this.refreshTimer = setInterval(() => this.refreshAll(), mins * 60 * 1000);
+      },
+
+      /* ───── Settings ───── */
+      openSettings() {
+        this.renderSettings();
+        document.getElementById('settings-overlay').classList.add('open');
+        document.getElementById('settings-panel').classList.add('open');
+      },
+
+      closeSettings() {
+        // Save any widget-specific configs
+        Object.values(WIDGETS).forEach(w => w.saveConfig?.());
+        document.getElementById('settings-overlay').classList.remove('open');
+        document.getElementById('settings-panel').classList.remove('open');
+        this.renderGrid();
+        this.refreshAll();
+        this.startAutoRefresh();
+      },
+
+      renderSettings() {
+        const state = Store.get();
+        const body = document.getElementById('settings-body');
+
+        let html = `<div class="settings-section"><h3>Widgets</h3>`;
+        Object.values(WIDGETS).forEach(w => {
+          const checked = state.activeWidgets.includes(w.id) ? 'checked' : '';
+          html += `
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">${w.icon} ${w.name}</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" ${checked} onchange="App.toggleWidget('${w.id}', this.checked)">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>`;
+        });
+        html += `</div>`;
+
+        // API Keys section
+        const keyWidgets = Object.values(WIDGETS).filter(w => w.needsKey);
+        if (keyWidgets.length) {
+          html += `<div class="settings-section"><h3>API Keys</h3>`;
+          keyWidgets.forEach(w => {
+            const val = state.apiKeys[w.needsKey] || '';
+            html += `
+              <div style="margin-bottom:16px">
+                <div class="setting-label">${w.keyLabel}</div>
+                <input class="setting-input" type="password" id="key-${w.needsKey}" value="${val}"
+                  placeholder="Enter API key" onchange="App.saveKey('${w.needsKey}', this.value)">
+                <div class="api-key-help">Free key: <a href="${w.keyUrl}" target="_blank">${w.keyUrl}</a></div>
+              </div>`;
+          });
+          html += `</div>`;
+        }
+
+        // Widget configs
+        const configWidgets = Object.values(WIDGETS).filter(w => w.configHTML);
+        if (configWidgets.length) {
+          html += `<div class="settings-section"><h3>Customize</h3>`;
+          configWidgets.forEach(w => {
+            if (state.activeWidgets.includes(w.id)) {
+              html += `<div class="setting-label">${w.name}</div>${w.configHTML()}<div style="margin-bottom:16px"></div>`;
+            }
+          });
+          html += `</div>`;
+        }
+
+        // Refresh interval
+        html += `
+          <div class="settings-section">
+            <h3>General</h3>
+            <div class="setting-row">
+              <div class="setting-label">Auto-refresh (minutes)</div>
+              <input class="setting-input" type="number" min="1" max="60" value="${state.refreshMinutes || 5}"
+                style="width:70px;text-align:center;margin:0" onchange="App.saveRefresh(this.value)">
+            </div>
+          </div>`;
+
+        body.innerHTML = html;
+      },
+
+      toggleWidget(id, on) {
+        const active = [...Store.get().activeWidgets];
+        if (on && !active.includes(id)) active.push(id);
+        if (!on) {
+          const idx = active.indexOf(id);
+          if (idx > -1) active.splice(idx, 1);
+        }
+        Store.set({ activeWidgets: active });
+        this.renderSettings();
+      },
+
+      saveKey(name, value) {
+        const apiKeys = { ...Store.get().apiKeys, [name]: value.trim() };
+        Store.set({ apiKeys });
+      },
+
+      saveRefresh(val) {
+        Store.set({ refreshMinutes: Math.max(1, parseInt(val) || 5) });
+      },
+
+      /* ───── Events ───── */
+      bindEvents() {
+        document.getElementById('theme-toggle').addEventListener('click', () => this.toggleTheme());
+        document.getElementById('settings-btn').addEventListener('click', () => this.openSettings());
+        document.getElementById('settings-close').addEventListener('click', () => this.closeSettings());
+        document.getElementById('settings-overlay').addEventListener('click', () => this.closeSettings());
+      },
+
+      registerSW() {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+      },
+    };
+
+    /* ───── Boot ───── */
+    App.init();
+  </script>
+</body>
+</html>
