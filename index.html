@@ -212,6 +212,269 @@
       border-bottom: 1px solid var(--border);
     }
 
+    /* ───── NBA Page ───── */
+    .nba-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      gap: 12px;
+    }
+
+    .nba-date-nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nba-date-nav button {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      transition: background var(--transition);
+    }
+
+    .nba-date-nav button:hover { background: var(--surface-hover); }
+
+    .nba-date-nav .date-label {
+      font-size: 14px;
+      font-weight: 600;
+      min-width: 120px;
+      text-align: center;
+    }
+
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 3px;
+    }
+
+    .tab-bar button {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all var(--transition);
+    }
+
+    .tab-bar button.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .nba-season-select {
+      appearance: none;
+      -webkit-appearance: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 28px 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      outline: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23777' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+    }
+
+    .game-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      transition: border-color var(--transition);
+    }
+
+    .game-card.live {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+
+    .game-card .game-status {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      text-align: right;
+      margin-bottom: 6px;
+    }
+
+    .game-card .game-status.live-status { color: var(--red); }
+
+    .game-team {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0;
+    }
+
+    .game-team .team-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .game-team .team-info img {
+      width: 24px;
+      height: 24px;
+    }
+
+    .game-team .team-score {
+      font-size: 18px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .game-team.winner .team-info { font-weight: 700; }
+
+    .game-team .team-record {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .box-score-toggle {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 8px 0 0;
+      font-family: inherit;
+      transition: color var(--transition);
+    }
+
+    .box-score-toggle:hover { color: var(--text); }
+
+    .box-score {
+      margin-top: 12px;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+      overflow-x: auto;
+    }
+
+    .box-score h4 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin: 10px 0 6px;
+    }
+
+    .box-score h4:first-child { margin-top: 0; }
+
+    .box-score table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .box-score th {
+      text-align: right;
+      padding: 4px 6px;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .box-score th:first-child { text-align: left; }
+
+    .box-score td {
+      text-align: right;
+      padding: 4px 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .box-score td:first-child {
+      text-align: left;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .no-games {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .standings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 700px) {
+      .standings-grid { grid-template-columns: 1fr; }
+    }
+
+    .standings-section h3 {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .standings-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .standings-table th {
+      text-align: right;
+      padding: 8px 6px;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .standings-table th:first-child { text-align: left; }
+
+    .standings-table td {
+      text-align: right;
+      padding: 8px 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .standings-table td:first-child {
+      text-align: left;
+      font-weight: 500;
+    }
+
+    .standings-table tr:hover { background: var(--surface-hover); }
+
     /* ───── Placeholder Page ───── */
     .placeholder-page {
       display: flex;
@@ -554,6 +817,22 @@
         return r.json();
       },
 
+      async fetchNBAScoreboard(date) {
+        const url = `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard${date ? '?dates=' + date : ''}`;
+        const r = await fetch(url);
+        return r.json();
+      },
+
+      async fetchNBAStandings(season = 2026) {
+        const r = await fetch(`https://site.api.espn.com/apis/v2/sports/basketball/nba/standings?season=${season}`);
+        return r.json();
+      },
+
+      async fetchNBABoxScore(eventId) {
+        const r = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=${eventId}`);
+        return r.json();
+      },
+
       async fetchCrypto(coins) {
         const ids = coins.join(',');
         const r = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&sparkline=false`);
@@ -707,14 +986,221 @@
         }
       },
 
-      /* ───── NBA (placeholder) ───── */
-      nba() {
-        document.getElementById('page-content').innerHTML = `
-          <div class="placeholder-page fade-in">
-            <div class="icon">&#127936;</div>
-            <h2>NBA Scores</h2>
-            <p>Coming soon — scores, standings, and more.</p>
+      /* ───── NBA ───── */
+      _nbaDate: null,
+      _nbaTab: 'scores',
+      _nbaSeason: 2026,
+      _nbaBoxCache: {},
+
+      async nba() {
+        const content = document.getElementById('page-content');
+        if (!this._nbaDate) this._nbaDate = new Date();
+        const tab = this._nbaTab;
+
+        const dateStr = this._nbaDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const yyyymmdd = this._nbaDate.getFullYear().toString() +
+          String(this._nbaDate.getMonth() + 1).padStart(2, '0') +
+          String(this._nbaDate.getDate()).padStart(2, '0');
+
+        content.innerHTML = `
+          <div class="nba-nav">
+            ${tab === 'scores' ? `<div class="nba-date-nav">
+              <button onclick="Pages._nbaShiftDate(-1)">&lsaquo;</button>
+              <span class="date-label">${dateStr}</span>
+              <button onclick="Pages._nbaShiftDate(1)">&rsaquo;</button>
+            </div>` : `<select id="nba-season-select" class="nba-season-select" onchange="Pages._nbaSeason=parseInt(this.value);Pages.nba()">
+              ${[2026,2025,2024,2023,2022].map(y => `<option value="${y}" ${y === (this._nbaSeason || 2026) ? 'selected' : ''}>${y-1}-${String(y).slice(2)}</option>`).join('')}
+            </select>`}
+            <div class="tab-bar">
+              <button class="${tab === 'scores' ? 'active' : ''}" onclick="Pages._nbaTab='scores';Pages.nba()">Scores</button>
+              <button class="${tab === 'standings' ? 'active' : ''}" onclick="Pages._nbaTab='standings';Pages.nba()">Standings</button>
+            </div>
+          </div>
+          <div id="nba-content"><div class="page-loading"><div class="spinner"></div></div></div>`;
+
+        try {
+          if (tab === 'scores') {
+            await this._nbaRenderScores(yyyymmdd);
+          } else {
+            await this._nbaRenderStandings();
+          }
+        } catch (e) {
+          document.getElementById('nba-content').innerHTML = `
+            <div class="page-error">
+              <span style="font-size:28px">&#9888;</span>
+              <span>${e.message || 'Failed to load NBA data'}</span>
+              <a onclick="Pages.nba()">Retry</a>
+            </div>`;
+        }
+      },
+
+      _nbaShiftDate(delta) {
+        this._nbaDate.setDate(this._nbaDate.getDate() + delta);
+        this.nba();
+      },
+
+      async _nbaRenderScores(date) {
+        const data = await API.fetchNBAScoreboard(date);
+        const events = data.events || [];
+        const container = document.getElementById('nba-content');
+
+        if (!events.length) {
+          container.innerHTML = '<div class="no-games fade-in">No games scheduled</div>';
+          return;
+        }
+
+        container.innerHTML = '<div class="fade-in">' + events.map(ev => {
+          const comp = ev.competitions[0];
+          const status = comp.status;
+          const isLive = status.type.state === 'in';
+          const isFinal = status.type.state === 'post';
+          const isPre = status.type.state === 'pre';
+
+          let statusText = '';
+          if (isLive) {
+            statusText = `Q${status.period} ${status.displayClock}`;
+          } else if (isFinal) {
+            statusText = status.type.detail || 'Final';
+          } else {
+            statusText = new Date(ev.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+          }
+
+          const away = comp.competitors.find(c => c.homeAway === 'away');
+          const home = comp.competitors.find(c => c.homeAway === 'home');
+
+          const awayWin = isFinal && parseInt(away.score) > parseInt(home.score);
+          const homeWin = isFinal && parseInt(home.score) > parseInt(away.score);
+
+          const teamRow = (team, isWinner) => {
+            const logo = team.team.logo || '';
+            const record = team.records?.[0]?.summary || '';
+            return `<div class="game-team ${isWinner ? 'winner' : ''}">
+              <div class="team-info">
+                ${logo ? `<img src="${logo}" alt="">` : ''}
+                <span>${team.team.abbreviation} <span class="team-record">${record}</span></span>
+              </div>
+              <div class="team-score">${isPre ? '' : team.score}</div>
+            </div>`;
+          };
+
+          return `<div class="game-card ${isLive ? 'live' : ''}" id="game-${ev.id}">
+            <div class="game-status ${isLive ? 'live-status' : ''}">${statusText}</div>
+            ${teamRow(away, awayWin)}
+            ${teamRow(home, homeWin)}
+            ${isFinal ? `<button class="box-score-toggle" onclick="Pages._nbaToggleBox('${ev.id}')">&#9656; Box Score</button><div id="box-${ev.id}" style="display:none"></div>` : ''}
           </div>`;
+        }).join('') + '</div>';
+      },
+
+      async _nbaToggleBox(eventId) {
+        const el = document.getElementById('box-' + eventId);
+        if (!el) return;
+
+        if (el.style.display !== 'none') {
+          el.style.display = 'none';
+          return;
+        }
+
+        el.style.display = 'block';
+
+        if (el.innerHTML) return; // already loaded
+
+        el.innerHTML = '<div class="page-loading" style="padding:12px 0"><div class="spinner"></div></div>';
+
+        try {
+          const data = this._nbaBoxCache[eventId] || await API.fetchNBABoxScore(eventId);
+          this._nbaBoxCache[eventId] = data;
+
+          const boxscore = data.boxscore;
+          if (!boxscore || !boxscore.players) {
+            el.innerHTML = '<div style="padding:8px 0;color:var(--text-muted);font-size:12px">Box score not available</div>';
+            return;
+          }
+
+          const COLS = ['MIN', 'PTS', 'REB', 'AST', 'FG', '+/-'];
+          const COL_KEYS = ['minutes', 'points', 'totalRebounds', 'assists', 'fieldGoalsMade-fieldGoalsAttempted', 'plusMinus'];
+
+          let html = '<div class="box-score">';
+          boxscore.players.forEach(teamData => {
+            const teamName = teamData.team.abbreviation;
+            html += `<h4>${teamName}</h4>`;
+            html += `<table><thead><tr><th>Player</th>${COLS.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>`;
+
+            const labels = teamData.statistics[0]?.labels || [];
+
+            teamData.statistics[0]?.athletes?.forEach(p => {
+              const stats = p.stats || [];
+              if (!stats.length) return;
+              const name = p.athlete?.shortName || p.athlete?.displayName || '';
+
+              // Map stats by label index
+              const minIdx = labels.indexOf('MIN');
+              const ptsIdx = labels.indexOf('PTS');
+              const rebIdx = labels.indexOf('REB');
+              const astIdx = labels.indexOf('AST');
+              const fgIdx = labels.indexOf('FG');
+              const pmIdx = labels.indexOf('+/-');
+
+              const min = stats[minIdx] || '0';
+              const pts = stats[ptsIdx] || '0';
+              const reb = stats[rebIdx] || '0';
+              const ast = stats[astIdx] || '0';
+              const fg = stats[fgIdx] || '-';
+              const pm = stats[pmIdx] || '0';
+
+              if (min === '0' && pts === '0') return; // skip DNPs
+
+              html += `<tr><td>${name}</td><td>${min}</td><td>${pts}</td><td>${reb}</td><td>${ast}</td><td>${fg}</td><td>${pm}</td></tr>`;
+            });
+
+            html += '</tbody></table>';
+          });
+          html += '</div>';
+          el.innerHTML = html;
+        } catch {
+          el.innerHTML = '<div style="padding:8px 0;color:var(--text-muted);font-size:12px">Failed to load box score</div>';
+        }
+      },
+
+      async _nbaRenderStandings() {
+        const data = await API.fetchNBAStandings(this._nbaSeason || 2026);
+        const container = document.getElementById('nba-content');
+        const children = data.children || [];
+
+        if (!children.length) {
+          container.innerHTML = '<div class="no-games fade-in">Standings not available</div>';
+          return;
+        }
+
+        let html = '<div class="standings-grid fade-in">';
+        children.forEach(conf => {
+          const confName = conf.name || 'Conference';
+          const entries = conf.standings?.entries || [];
+
+          entries.sort((a, b) => {
+            const aW = a.stats?.find(s => s.name === 'wins')?.value || 0;
+            const bW = b.stats?.find(s => s.name === 'wins')?.value || 0;
+            return bW - aW;
+          });
+
+          html += `<div class="standings-section"><h3>${confName}</h3>`;
+          html += `<table class="standings-table"><thead><tr><th>#</th><th style="text-align:left">Team</th><th>W</th><th>L</th><th>PCT</th><th>GB</th></tr></thead><tbody>`;
+
+          entries.forEach((entry, i) => {
+            const team = entry.team?.abbreviation || entry.team?.shortDisplayName || '?';
+            const stats = entry.stats || [];
+            const wins = stats.find(s => s.name === 'wins')?.displayValue || '0';
+            const losses = stats.find(s => s.name === 'losses')?.displayValue || '0';
+            const pct = stats.find(s => s.name === 'winPercent')?.displayValue || '.000';
+            const gb = stats.find(s => s.name === 'gamesBehind')?.displayValue || '-';
+
+            html += `<tr><td>${i + 1}</td><td style="text-align:left">${team}</td><td>${wins}</td><td>${losses}</td><td>${pct}</td><td>${gb}</td></tr>`;
+          });
+
+          html += '</tbody></table></div>';
+        });
+        html += '</div>';
+        container.innerHTML = html;
       },
 
       /* ───── EPL (placeholder) ───── */
