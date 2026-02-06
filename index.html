@@ -591,6 +591,82 @@
       margin-left: 8px;
     }
 
+    /* ───── Calendar ───── */
+    .cal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+    }
+
+    .cal-header .cal-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .cal-header .cal-nav {
+      display: flex;
+      gap: 8px;
+    }
+
+    .cal-header .cal-nav button {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      transition: background var(--transition);
+    }
+
+    .cal-header .cal-nav button:hover { background: var(--surface-hover); }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+    }
+
+    .cal-grid .cal-dow {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      padding: 8px 0;
+    }
+
+    .cal-grid .cal-day {
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 10px;
+      color: var(--text);
+      transition: background var(--transition);
+    }
+
+    .cal-grid .cal-day:hover { background: var(--surface-hover); }
+    .cal-grid .cal-day.empty { pointer-events: none; }
+    .cal-grid .cal-day.other-month { color: var(--text-muted); opacity: 0.3; }
+
+    .cal-grid .cal-day.today {
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .cal-grid .cal-day.today:hover { background: var(--accent-hover); }
+
+    .cal-grid .cal-day.sunday { color: var(--red); }
+    .cal-grid .cal-day.sunday.other-month { color: var(--red); }
+    .cal-grid .cal-day.today.sunday { color: #fff; }
+
     /* ───── Placeholder Page ───── */
     .placeholder-page {
       display: flex;
@@ -793,6 +869,7 @@
         <option value="finance">FIN</option>
         <option value="nba">NBA</option>
         <option value="epl">EPL</option>
+        <option value="cal">CAL</option>
       </select>
       <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme">
         <span id="theme-icon">&#9789;</span>
@@ -1665,6 +1742,72 @@
         });
         html += '</div>';
         container.innerHTML = html;
+      },
+
+      /* ───── Calendar ───── */
+      _calDate: null,
+
+      cal() {
+        const content = document.getElementById('page-content');
+        if (!this._calDate) this._calDate = new Date();
+        const d = this._calDate;
+        const year = d.getFullYear();
+        const month = d.getMonth();
+
+        const title = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        const today = new Date();
+        const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+
+        // First day of month (0=Sun) and days in month
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const daysInPrev = new Date(year, month, 0).getDate();
+
+        const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+        let cells = DOW.map(d => `<div class="cal-dow">${d}</div>`).join('');
+
+        // Previous month trailing days
+        for (let i = firstDay - 1; i >= 0; i--) {
+          const day = daysInPrev - i;
+          cells += `<div class="cal-day other-month${(firstDay - 1 - i) % 7 === 0 ? ' sunday' : ''}">${day}</div>`;
+        }
+
+        // Current month days
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dayOfWeek = (firstDay + day - 1) % 7;
+          const isToday = isCurrentMonth && day === today.getDate();
+          const isSun = dayOfWeek === 0;
+          let cls = 'cal-day';
+          if (isToday) cls += ' today';
+          if (isSun) cls += ' sunday';
+          cells += `<div class="${cls}">${day}</div>`;
+        }
+
+        // Next month leading days
+        const totalCells = firstDay + daysInMonth;
+        const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+        for (let i = 1; i <= remaining; i++) {
+          const isSun = (totalCells + i - 1) % 7 === 0;
+          cells += `<div class="cal-day other-month${isSun ? ' sunday' : ''}">${i}</div>`;
+        }
+
+        content.innerHTML = `
+          <div class="cal-header">
+            <div class="cal-nav">
+              <button onclick="Pages._calShift(-1)">&lsaquo;</button>
+            </div>
+            <span class="cal-title">${title}</span>
+            <div class="cal-nav">
+              <button onclick="Pages._calShift(1)">&rsaquo;</button>
+            </div>
+          </div>
+          <div class="cal-grid fade-in">${cells}</div>`;
+      },
+
+      _calShift(delta) {
+        this._calDate.setMonth(this._calDate.getMonth() + delta);
+        this.cal();
       },
     };
 
