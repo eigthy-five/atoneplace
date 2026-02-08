@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atoneplace-v9';
+const CACHE_NAME = 'atoneplace-v10';
 const SHELL_ASSETS = ['/', '/index.html', '/manifest.json', '/icon.svg'];
 
 self.addEventListener('install', e => {
