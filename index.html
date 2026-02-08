@@ -591,6 +591,82 @@
       margin-left: 8px;
     }
 
+    /* ───── Cricket ───── */
+    .cric-league-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      padding: 16px 0 6px;
+    }
+
+    .cric-score-line {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .cric-scorecard {
+      margin-top: 12px;
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+      overflow-x: auto;
+    }
+
+    .cric-scorecard h4 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin: 10px 0 4px;
+    }
+
+    .cric-scorecard h4:first-child { margin-top: 0; }
+
+    .cric-scorecard table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .cric-scorecard th {
+      text-align: right;
+      padding: 4px 6px;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .cric-scorecard th:first-child { text-align: left; }
+
+    .cric-scorecard td {
+      text-align: right;
+      padding: 4px 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .cric-scorecard td:first-child {
+      text-align: left;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .cric-scorecard .sc-total {
+      font-weight: 700;
+      border-top: 2px solid var(--border);
+    }
+
+    .cric-scorecard .sc-dismissal {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
     /* ───── News ───── */
     .news-list { padding-top: 4px; }
 
@@ -967,6 +1043,7 @@
         <option value="finance">FIN</option>
         <option value="nba">NBA</option>
         <option value="epl">EPL</option>
+        <option value="cric">CRIC</option>
         <option value="news">NEWS</option>
         <option value="cal">CAL</option>
       </select>
@@ -1150,6 +1227,24 @@
         const r = await fetch(url);
         const d = await r.json();
         return { name: d.shortName || d.displayName, pos: d.position?.abbreviation || '' };
+      },
+
+      CRIC_LEAGUES: {
+        8604: 'ICC T20 World Cup',
+        8037: 'ICC Champions Trophy',
+        8039: 'ICC World Cup',
+        8048: 'IPL',
+      },
+
+      async fetchCricScoreboard(leagueId, date) {
+        const url = `https://site.api.espn.com/apis/site/v2/sports/cricket/${leagueId}/scoreboard${date ? '?dates=' + date : ''}`;
+        const r = await fetch(url);
+        return r.json();
+      },
+
+      async fetchCricSummary(leagueId, eventId) {
+        const r = await fetch(`https://site.api.espn.com/apis/site/v2/sports/cricket/${leagueId}/summary?event=${eventId}`);
+        return r.json();
       },
 
       async fetchHNTopStories(limit = 20) {
@@ -1470,7 +1565,7 @@
             <div class="game-status ${isLive ? 'live-status' : ''}">${statusText}</div>
             ${teamRow(away, awayWin)}
             ${teamRow(home, homeWin)}
-            ${isFinal ? `<button class="box-score-toggle" onclick="Pages._nbaToggleBox('${ev.id}')">&#9656; Box Score</button><div id="box-${ev.id}" style="display:none"></div>` : ''}
+            ${(isFinal || isLive) ? `<button class="box-score-toggle" onclick="Pages._nbaToggleBox('${ev.id}')">&#9656; Box Score</button><div id="box-${ev.id}" style="display:none"></div>` : ''}
           </div>`;
         }).join('') + '</div>';
       },
@@ -1754,7 +1849,7 @@
             <div class="game-status ${isLive ? 'live-status' : ''}">${statusText}</div>
             ${teamRow(home, homeWin)}
             ${teamRow(away, awayWin)}
-            ${isFinal ? `<button class="box-score-toggle" onclick="Pages._eplToggleEvents('${ev.id}')">&#9656; Match Events</button><div id="epl-ev-${ev.id}" style="display:none"></div>` : ''}
+            ${(isFinal || isLive) ? `<button class="box-score-toggle" onclick="Pages._eplToggleEvents('${ev.id}')">&#9656; Match Events</button><div id="epl-ev-${ev.id}" style="display:none"></div>` : ''}
           </div>`;
         }).join('') + '</div>';
       },
@@ -1891,6 +1986,181 @@
         });
         html += '</div>';
         container.innerHTML = html;
+      },
+
+      /* ───── Cricket ───── */
+      _cricDate: null,
+      _cricCardCache: {},
+      _cricUseDate: false,
+
+      async cric() {
+        const content = document.getElementById('page-content');
+        if (!this._cricDate) this._cricDate = new Date();
+
+        const dateStr = this._cricDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const yyyymmdd = this._cricDate.getFullYear().toString() +
+          String(this._cricDate.getMonth() + 1).padStart(2, '0') +
+          String(this._cricDate.getDate()).padStart(2, '0');
+
+        content.innerHTML = `
+          <div class="nba-nav">
+            <div class="nba-date-nav">
+              <button onclick="Pages._cricShiftDate(-1)">&lsaquo;</button>
+              <span class="date-label">${this._cricUseDate ? dateStr : 'Latest'}</span>
+              <button onclick="Pages._cricShiftDate(1)">&rsaquo;</button>
+            </div>
+            <button class="box-score-toggle" style="padding:0;font-size:12px" onclick="Pages._cricUseDate=false;Pages._cricDate=new Date();Pages.cric()">Latest</button>
+          </div>
+          <div id="cric-content"><div class="page-loading"><div class="spinner"></div></div></div>`;
+
+        try {
+          await this._cricRenderMatches(this._cricUseDate ? yyyymmdd : null);
+        } catch (e) {
+          document.getElementById('cric-content').innerHTML = `
+            <div class="page-error">
+              <span style="font-size:28px">&#9888;</span>
+              <span>${e.message || 'Failed to load cricket data'}</span>
+              <a onclick="Pages.cric()">Retry</a>
+            </div>`;
+        }
+      },
+
+      _cricShiftDate(delta) {
+        this._cricUseDate = true;
+        this._cricDate.setDate(this._cricDate.getDate() + delta);
+        this.cric();
+      },
+
+      async _cricRenderMatches(date) {
+        const leagues = API.CRIC_LEAGUES;
+        const results = await Promise.all(
+          Object.keys(leagues).map(id =>
+            API.fetchCricScoreboard(id, date)
+              .then(d => ({ id, name: d.leagues?.[0]?.name || leagues[id], events: (d.events || []).filter(e => e && e.id) }))
+              .catch(() => ({ id, name: leagues[id], events: [] }))
+          )
+        );
+
+        const container = document.getElementById('cric-content');
+        const allEvents = results.flatMap(r => r.events.map(e => ({ ...e, leagueId: r.id, leagueName: r.name })));
+
+        if (!allEvents.length) {
+          container.innerHTML = '<div class="no-games fade-in">No matches scheduled</div>';
+          return;
+        }
+
+        let html = '<div class="fade-in">';
+        let currentLeague = '';
+
+        allEvents.forEach(ev => {
+          if (ev.leagueName !== currentLeague) {
+            currentLeague = ev.leagueName;
+            html += `<div class="cric-league-label">${currentLeague}</div>`;
+          }
+
+          const comp = ev.competitions[0];
+          const st = comp.status;
+          const isLive = st.type.state === 'in';
+          const isFinal = st.type.state === 'post';
+          const isPre = st.type.state === 'pre';
+
+          let statusText = '';
+          if (isLive) statusText = st.type.detail || 'LIVE';
+          else if (isFinal) statusText = st.type.detail || 'Final';
+          else statusText = new Date(ev.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+          const competitors = comp.competitors || [];
+          const teamRows = competitors.map(c => {
+            const abbr = c.team?.abbreviation || '?';
+            const logo = c.team?.logo || '';
+            const score = c.score || '';
+            const ls = (c.linescores || []).map(l => l.value).filter(v => v != null);
+            const scoreDetail = score;
+            const isWinner = c.winner;
+
+            return `<div class="game-team ${isWinner ? 'winner' : ''}">
+              <div class="team-info">
+                ${logo ? `<img src="${logo}" alt="">` : ''}
+                <span>${abbr}</span>
+              </div>
+              <div class="team-score">${isPre ? '' : scoreDetail}</div>
+            </div>`;
+          }).join('');
+
+          const note = comp.notes?.[0]?.headline || '';
+          const noteHTML = note ? `<div class="cric-score-line">${note}</div>` : '';
+
+          html += `<div class="game-card ${isLive ? 'live' : ''}" id="cric-game-${ev.id}">
+            <div class="game-status ${isLive ? 'live-status' : ''}">${statusText}</div>
+            ${teamRows}
+            ${noteHTML}
+            ${(isFinal || isLive) ? `<button class="box-score-toggle" onclick="Pages._cricToggleCard('${ev.leagueId}','${ev.id}')">&#9656; Scorecard</button><div id="cric-sc-${ev.id}" style="display:none"></div>` : ''}
+          </div>`;
+        });
+
+        html += '</div>';
+        container.innerHTML = html;
+      },
+
+      async _cricToggleCard(leagueId, eventId) {
+        const el = document.getElementById('cric-sc-' + eventId);
+        if (!el) return;
+
+        if (el.style.display !== 'none') {
+          el.style.display = 'none';
+          return;
+        }
+
+        el.style.display = 'block';
+        if (el.innerHTML && !el.innerHTML.includes('spinner')) return;
+
+        el.innerHTML = '<div class="page-loading" style="padding:12px 0"><div class="spinner"></div></div>';
+
+        try {
+          const data = this._cricCardCache[eventId] || await API.fetchCricSummary(leagueId, eventId);
+          this._cricCardCache[eventId] = data;
+
+          const matchcards = data.matchcards || [];
+          if (!matchcards.length) {
+            el.innerHTML = '<div style="padding:8px 0;color:var(--text-muted);font-size:12px">Scorecard not available</div>';
+            return;
+          }
+
+          let html = '<div class="cric-scorecard">';
+          matchcards.forEach(mc => {
+            const headline = mc.headline || '';
+            const team = mc.teamName || '';
+            const inn = mc.inningsNumber || '';
+            const total = mc.total || '';
+            const extras = mc.extras || '';
+            const players = mc.playerDetails || [];
+
+            if (headline === 'Batting' && players.length) {
+              html += `<h4>${team} - Innings ${inn}</h4>`;
+              html += '<table><thead><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th></tr></thead><tbody>';
+              players.forEach(p => {
+                if (!p.playerName) return;
+                const dismissal = p.dismissal ? `<span class="sc-dismissal"> ${p.dismissal}</span>` : '';
+                html += `<tr><td>${p.playerName}${dismissal}</td><td>${p.runs || 0}</td><td>${p.ballsFaced || 0}</td><td>${p.fours || 0}</td><td>${p.sixes || 0}</td></tr>`;
+              });
+              if (extras) html += `<tr><td>Extras</td><td colspan="4">${extras}</td></tr>`;
+              if (total) html += `<tr class="sc-total"><td>Total</td><td colspan="4">${total}</td></tr>`;
+              html += '</tbody></table>';
+            } else if (headline === 'Bowling' && players.length) {
+              html += `<h4>${team} - Bowling</h4>`;
+              html += '<table><thead><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Econ</th></tr></thead><tbody>';
+              players.forEach(p => {
+                if (!p.playerName) return;
+                html += `<tr><td>${p.playerName}</td><td>${p.overs || 0}</td><td>${p.maidens || 0}</td><td>${p.conceded || 0}</td><td>${p.wickets || 0}</td><td>${p.economyRate || '-'}</td></tr>`;
+              });
+              html += '</tbody></table>';
+            }
+          });
+          html += '</div>';
+          el.innerHTML = html;
+        } catch {
+          el.innerHTML = '<div style="padding:8px 0;color:var(--text-muted);font-size:12px">Failed to load scorecard</div>';
+        }
       },
 
       /* ───── News ───── */
